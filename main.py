@@ -18,7 +18,6 @@ client = discord.Client(intents=intents)
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
-# Memory hội thoại - Tăng lên 25 tin
 conversation_history = defaultdict(list)
 
 @client.event
@@ -32,94 +31,84 @@ async def on_message(message):
 
     content = message.content.strip().lower()
 
-    # Lệnh tóm tắt
     if content.startswith('!tomtat') or content.startswith('!tóm tắt'):
         await handle_tomtat(message)
         return
 
-    # Chỉ trả lời khi được mention trực tiếp
     if client.user.mentioned_in(message) and not message.mention_everyone:
         query = message.content.replace(f'<@{client.user.id}>', '').strip()
         if not query:
             return
 
         channel_id = str(message.channel.id)
-        thinking = await message.reply("🤔 Đang suy nghĩ...")
+        thinking = await message.reply("🤔 Đang nghĩ...")
 
         try:
-            # Thêm câu hỏi vào history
             conversation_history[channel_id].append({"role": "user", "content": query})
-
-            # Giới hạn 25 tin gần nhất
             if len(conversation_history[channel_id]) > 25:
                 conversation_history[channel_id] = conversation_history[channel_id][-25:]
 
-            # Search nếu cần
-            search_context = ""
-            if any(k in query.lower() for k in ["thời tiết", "tin", "kết quả", "trận", "bóng", "world cup", "kèo", "dự đoán"]):
-                search_result = tavily.search(query, max_results=4, search_depth="basic")
-                search_context = "\n".join([f"- {r['content'][:250]}" for r in search_result.get('results', [])])
+            history = conversation_history[channel_id][-20:]
 
-            history = conversation_history[channel_id][-20:]  # Dùng 20 tin gần nhất để prompt
+            search_context = ""
+            if any(k in query.lower() for k in ["thời tiết", "tin", "kết quả", "trận", "bóng", "kèo", "dự đoán"]):
+                search = tavily.search(query, max_results=4)
+                search_context = "\n".join([f"- {r['content'][:250]}" for r in search.get('results', [])])
 
             messages = [
-                {"role": "system", "content": """Bạn là AI vui tính, thân thiện. 
-                Duy trì hội thoại tự nhiên. Dùng emoji liên quan đến chủ đề (🇧🇷, 🇯🇵, ⚽, 🌤️...). 
-                Trả lời ngắn gọn, tối đa 3-4 câu. Hôm nay là 29/6/2026."""}
+                {"role": "system", "content": """Bạn là Grok, một AI vui tính, thân thiện, nói tiếng Việt tự nhiên như người Việt Nam. 
+                Giọng điệu gần gũi, hay dùng slang nhẹ, emoji phù hợp. 
+                Luôn hiểu và trả lời theo chuỗi hội thoại trước đó. 
+                Hôm nay là ngày 29 tháng 6 năm 2026."""}
             ] + history
 
             if search_context:
-                messages.append({"role": "user", "content": f"Thông tin mới nhất: {search_context}"})
+                messages.append({"role": "user", "content": f"Thông tin tham khảo: {search_context}"})
 
             completion = groq_client.chat.completions.create(
                 messages=messages,
                 model="llama-3.3-70b-versatile",
-                temperature=0.75,
-                max_tokens=700
+                temperature=0.8,
+                max_tokens=800
             )
 
             response = completion.choices[0].message.content.strip()
 
             conversation_history[channel_id].append({"role": "assistant", "content": response})
-
             await thinking.edit(content=response)
 
         except Exception:
-            await thinking.edit(content="❌ Có lỗi rồi, thử lại sau nhé! 😅")
+            await thinking.edit(content="❌ Lỗi rồi bro, thử lại sau nhé! 😅")
 
 async def handle_tomtat(message):
-    await message.channel.send("📖 Đang đọc 800 tin nhắn gần nhất để tóm tắt drama...")
-
+    await message.channel.send("📖 Đang đọc 800 tin nhắn để tóm tắt...")
     try:
-        messages = []
-        async for msg in message.channel.history(limit=800):
-            if not msg.author.bot and msg.content.strip():
-                messages.append(f"{msg.author.display_name}: {msg.content}")
-
-        history_text = "\n".join(reversed(messages[-600:]))  # Dùng 600 tin để tóm tắt
+        msgs = []
+        async for m in message.channel.history(limit=800):
+            if not m.author.bot and m.content.strip():
+                msgs.append(f"{m.author.display_name}: {m.content}")
+        
+        history_text = "\n".join(reversed(msgs[-750:]))
 
         completion = groq_client.chat.completions.create(
             messages=[
-                {"role": "system", "content": "Tóm tắt drama đang diễn ra một cách vui vẻ, logic, dùng emoji phù hợp."},
-                {"role": "user", "content": f"Tóm tắt cuộc trò chuyện:\n{history_text}"}
+                {"role": "system", "content": "Tóm tắt drama đang diễn ra trong group một cách vui vẻ, ngắn gọn, dùng emoji."},
+                {"role": "user", "content": f"Tóm tắt:\n{history_text}"}
             ],
             model="llama-3.3-70b-versatile",
             temperature=0.7,
-            max_tokens=900
+            max_tokens=1000
         )
-
-        summary = completion.choices[0].message.content.strip()
-        await message.reply(f"**Tóm tắt drama:**\n\n{summary}")
-
+        await message.reply(f"**Tóm tắt drama:**\n\n{completion.choices[0].message.content.strip()}")
     except Exception:
-        await message.reply("❌ Không đọc được lịch sử tin nhắn 😔")
+        await message.reply("❌ Không đọc được lịch sử 😔")
 
 # Web Server
 app = FastAPI()
 
 @app.get("/")
 async def root():
-    return {"status": "Bot đang chạy! ⚽"}
+    return {"status": "Bot đang chạy!"}
 
 def run_discord_bot():
     client.run(os.getenv("DISCORD_TOKEN"))
