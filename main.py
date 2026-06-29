@@ -9,7 +9,6 @@ import threading
 
 load_dotenv()
 
-# Intents
 intents = discord.Intents.default()
 intents.message_content = True
 
@@ -17,8 +16,6 @@ client = discord.Client(intents=intents)
 
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
-
-thinking_messages = {}
 
 @client.event
 async def on_ready():
@@ -43,7 +40,6 @@ async def on_message(message):
             return
 
         thinking = await message.reply("🤔 Đang tìm thông tin...")
-        thinking_messages[message.id] = thinking
 
         try:
             search_result = tavily.search(query, max_results=4, search_depth="basic")
@@ -51,11 +47,13 @@ async def on_message(message):
 
             completion = groq_client.chat.completions.create(
                 messages=[
-                    {"role": "system", "content": "Bạn là AI thông minh, trả lời ngắn gọn, chính xác, vui vẻ bằng tiếng Việt. Tối đa 2-3 câu. Hôm nay là 29/6/2026."},
+                    {"role": "system", "content": """Bạn là AI vui tính, thân thiện. 
+                    Hãy thêm nhiều emoji phù hợp vào câu trả lời để sinh động hơn (mỗi câu khoảng 1-2 emoji).
+                    Trả lời ngắn gọn, tối đa 3-4 câu. Hôm nay là 29/6/2026."""},
                     {"role": "user", "content": f"Câu hỏi: {query}\n\nThông tin mới nhất:\n{context}"}
                 ],
                 model="llama-3.3-70b-versatile",
-                temperature=0.7,
+                temperature=0.8,
                 max_tokens=700
             )
 
@@ -63,7 +61,7 @@ async def on_message(message):
             await thinking.edit(content=response)
 
         except Exception:
-            await thinking.edit(content="❌ Có lỗi khi tìm thông tin, thử lại sau nhé!")
+            await thinking.edit(content="❌ Có lỗi rồi, thử lại sau nhé! 😅")
 
 async def handle_tomtat(message):
     await message.channel.send("📖 Đang đọc lịch sử kênh để tóm tắt drama...")
@@ -78,11 +76,11 @@ async def handle_tomtat(message):
 
         completion = groq_client.chat.completions.create(
             messages=[
-                {"role": "system", "content": "Tóm tắt ngắn gọn drama đang diễn ra trong group Discord. Nêu rõ ai nói gì nổi bật, tranh cãi gì."},
+                {"role": "system", "content": "Tóm tắt drama đang diễn ra một cách vui vẻ, thêm emoji. Nêu rõ các điểm nóng."},
                 {"role": "user", "content": f"Tóm tắt cuộc trò chuyện:\n{history_text}"}
             ],
             model="llama-3.3-70b-versatile",
-            temperature=0.6,
+            temperature=0.7,
             max_tokens=800
         )
 
@@ -90,14 +88,14 @@ async def handle_tomtat(message):
         await message.reply(f"**Tóm tắt drama:**\n\n{summary}")
 
     except Exception:
-        await message.reply("❌ Không đọc được lịch sử tin nhắn. Kiểm tra quyền bot (Read Message History).")
+        await message.reply("❌ Không đọc được lịch sử tin nhắn 😔")
 
 # Web Server
 app = FastAPI()
 
 @app.get("/")
 async def root():
-    return {"status": "Bot đang chạy!"}
+    return {"status": "Bot đang chạy vui vẻ! 🎉"}
 
 def run_discord_bot():
     client.run(os.getenv("DISCORD_TOKEN"))
