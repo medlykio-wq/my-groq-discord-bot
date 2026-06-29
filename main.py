@@ -9,10 +9,9 @@ import threading
 
 load_dotenv()
 
+# Intents
 intents = discord.Intents.default()
 intents.message_content = True
-intents.guilds = True
-intents.message_history = True   # Cần quyền đọc lịch sử
 
 client = discord.Client(intents=intents)
 
@@ -32,12 +31,12 @@ async def on_message(message):
 
     content = message.content.strip().lower()
 
-    # === LỆNH TÓM TẮT DRAMA ===
+    # Lệnh tóm tắt
     if content.startswith('!tomtat') or content.startswith('!tóm tắt'):
         await handle_tomtat(message)
         return
 
-    # === Bot được mention ===
+    # Bot được mention
     if client.user.mentioned_in(message):
         query = message.content.replace(f'<@{client.user.id}>', '').strip()
         if not query:
@@ -67,22 +66,20 @@ async def on_message(message):
             await thinking.edit(content="❌ Có lỗi khi tìm thông tin, thử lại sau nhé!")
 
 async def handle_tomtat(message):
-    await message.channel.send("📖 Đang đọc 500 tin nhắn gần nhất để tóm tắt drama...")
+    await message.channel.send("📖 Đang đọc lịch sử kênh để tóm tắt drama...")
 
     try:
-        # Đọc lịch sử tin nhắn
         messages = []
-        async for msg in message.channel.history(limit=500):
-            if not msg.author.bot:
+        async for msg in message.channel.history(limit=400):
+            if not msg.author.bot and msg.content:
                 messages.append(f"{msg.author.display_name}: {msg.content}")
 
-        history_text = "\n".join(reversed(messages[-300:]))  # Lấy 300 tin gần nhất để tránh quá dài
+        history_text = "\n".join(reversed(messages[-250:]))
 
-        # Gọi Groq tóm tắt
         completion = groq_client.chat.completions.create(
             messages=[
-                {"role": "system", "content": "Bạn là chuyên gia tóm tắt drama Discord. Tóm tắt ngắn gọn những gì mọi người đang nói, drama chính là gì, ai nói gì nổi bật. Trả lời bằng tiếng Việt, vui vẻ."},
-                {"role": "user", "content": f"Tóm tắt cuộc trò chuyện sau:\n{history_text}"}
+                {"role": "system", "content": "Tóm tắt ngắn gọn drama đang diễn ra trong group Discord. Nêu rõ ai nói gì nổi bật, tranh cãi gì."},
+                {"role": "user", "content": f"Tóm tắt cuộc trò chuyện:\n{history_text}"}
             ],
             model="llama-3.3-70b-versatile",
             temperature=0.6,
@@ -90,17 +87,17 @@ async def handle_tomtat(message):
         )
 
         summary = completion.choices[0].message.content.strip()
-        await message.reply(f"**Tóm tắt drama gần đây:**\n\n{summary}")
+        await message.reply(f"**Tóm tắt drama:**\n\n{summary}")
 
-    except Exception as e:
-        await message.reply("❌ Không thể đọc lịch sử tin nhắn. Kiểm tra quyền bot nhé!")
+    except Exception:
+        await message.reply("❌ Không đọc được lịch sử tin nhắn. Kiểm tra quyền bot (Read Message History).")
 
-# ================== WEB SERVER CHO RENDER ==================
+# Web Server
 app = FastAPI()
 
 @app.get("/")
 async def root():
-    return {"status": "Bot đang chạy tốt!"}
+    return {"status": "Bot đang chạy!"}
 
 def run_discord_bot():
     client.run(os.getenv("DISCORD_TOKEN"))
