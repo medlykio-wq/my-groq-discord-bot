@@ -81,28 +81,32 @@ async def on_message(message):
             await thinking.edit(content="❌ Lỗi rồi, thử lại sau! 😅")
 
 async def handle_tomtat(message):
-    await message.channel.send("📖 Đang đọc 800 tin nhắn gần nhất...")
+    await message.channel.send("📖 Đang đọc 500 tin nhắn gần nhất để tóm tắt drama...")
 
     try:
-        msgs = []
-        async for m in message.channel.history(limit=800):
-            if not m.author.bot and m.content.strip():
-                msgs.append(f"{m.author.display_name}: {m.content}")
-        
-        history_text = "\n".join(reversed(msgs[-600:]))
+        messages = []
+        async for msg in message.channel.history(limit=500):
+            if not msg.author.bot and msg.content.strip():
+                messages.append(f"{msg.author.display_name}: {msg.content}")
+
+        # Dùng khoảng 450 tin gần nhất
+        history_text = "\n".join(reversed(messages[-450:]))
 
         completion = groq_client.chat.completions.create(
             messages=[
-                {"role": "system", "content": "Tóm tắt drama vui vẻ, dùng emoji phù hợp."},
-                {"role": "user", "content": f"Tóm tắt:\n{history_text}"}
+                {"role": "system", "content": "Tóm tắt chi tiết những gì mọi người đang nói trong group. Nêu rõ drama chính, ai nói gì nổi bật, không cần ngắn gọn quá."},
+                {"role": "user", "content": f"Tóm tắt cuộc trò chuyện:\n{history_text}"}
             ],
             model="llama-3.3-70b-versatile",
             temperature=0.7,
-            max_tokens=950
+            max_tokens=1200   # Cho phép tóm tắt dài hơn
         )
-        await message.reply(f"**Tóm tắt drama:**\n\n{completion.choices[0].message.content.strip()}")
+
+        summary = completion.choices[0].message.content.strip()
+        await message.reply(f"**Tóm tắt drama:**\n\n{summary}")
+
     except Exception:
-        await message.reply("❌ Không đọc được lịch sử 😔")
+        await message.reply("❌ Không đọc được lịch sử tin nhắn. Kiểm tra quyền bot nhé! 😔")
 
 app = FastAPI()
 @app.get("/")
