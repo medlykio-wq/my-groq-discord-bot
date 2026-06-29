@@ -33,8 +33,8 @@ async def on_message(message):
         await handle_tomtat(message)
         return
 
-    # Bot được mention
-    if client.user.mentioned_in(message):
+    # Chỉ trả lời khi được mention trực tiếp (không phản hồi @everyone)
+    if client.user.mentioned_in(message) and not message.mention_everyone:
         query = message.content.replace(f'<@{client.user.id}>', '').strip()
         if not query:
             return
@@ -42,18 +42,18 @@ async def on_message(message):
         thinking = await message.reply("🤔 Đang tìm thông tin...")
 
         try:
-            search_result = tavily.search(query, max_results=4, search_depth="basic")
-            context = "\n".join([f"- {r['content'][:250]}" for r in search_result.get('results', [])])
+            search_result = tavily.search(query, max_results=5, search_depth="basic")
+            context = "\n".join([f"- {r['content'][:300]}" for r in search_result.get('results', [])])
 
             completion = groq_client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": """Bạn là AI vui tính, thân thiện. 
-                    Hãy thêm nhiều emoji phù hợp vào câu trả lời để sinh động hơn (mỗi câu khoảng 1-2 emoji).
+                    Khi trả lời hãy dùng emoji **liên quan trực tiếp** đến nội dung (ví dụ: ⚽ cho bóng đá, 🇧🇷 cho Brazil, 🇯🇵 cho Nhật Bản, 🌤️ cho thời tiết...).
                     Trả lời ngắn gọn, tối đa 3-4 câu. Hôm nay là 29/6/2026."""},
                     {"role": "user", "content": f"Câu hỏi: {query}\n\nThông tin mới nhất:\n{context}"}
                 ],
                 model="llama-3.3-70b-versatile",
-                temperature=0.8,
+                temperature=0.75,
                 max_tokens=700
             )
 
@@ -76,7 +76,7 @@ async def handle_tomtat(message):
 
         completion = groq_client.chat.completions.create(
             messages=[
-                {"role": "system", "content": "Tóm tắt drama đang diễn ra một cách vui vẻ, thêm emoji. Nêu rõ các điểm nóng."},
+                {"role": "system", "content": "Tóm tắt drama đang diễn ra một cách vui vẻ, dùng emoji phù hợp."},
                 {"role": "user", "content": f"Tóm tắt cuộc trò chuyện:\n{history_text}"}
             ],
             model="llama-3.3-70b-versatile",
@@ -90,12 +90,12 @@ async def handle_tomtat(message):
     except Exception:
         await message.reply("❌ Không đọc được lịch sử tin nhắn 😔")
 
-# Web Server
+# Web Server cho Render
 app = FastAPI()
 
 @app.get("/")
 async def root():
-    return {"status": "Bot đang chạy vui vẻ! 🎉"}
+    return {"status": "Bot đang chạy! ⚽"}
 
 def run_discord_bot():
     client.run(os.getenv("DISCORD_TOKEN"))
