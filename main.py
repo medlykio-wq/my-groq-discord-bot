@@ -51,53 +51,53 @@ async def on_message(message):
             history = conversation_history[channel_id][-20:]
 
             search_context = ""
-            if any(k in query.lower() for k in ["thời tiết", "tin", "kết quả", "trận", "bóng", "kèo", "dự đoán"]):
-                search = tavily.search(query, max_results=4)
-                search_context = "\n".join([f"- {r['content'][:250]}" for r in search.get('results', [])])
+            if any(k in query.lower() for k in ["thời tiết", "tin", "kết quả", "trận", "kèo", "bóng"]):
+                search = tavily.search(query, max_results=3)
+                search_context = "\n".join([f"- {r['content'][:200]}" for r in search.get('results', [])])
 
             messages = [
-                {"role": "system", "content": """Bạn là Grok, một AI vui tính, thân thiện, nói tiếng Việt tự nhiên như người Việt Nam. 
-                Giọng điệu gần gũi, hay dùng slang nhẹ, emoji phù hợp. 
-                Luôn hiểu và trả lời theo chuỗi hội thoại trước đó. 
-                Hôm nay là ngày 29 tháng 6 năm 2026."""}
+                {"role": "system", "content": """Bạn là Grok - thằng bạn vui tính, nói tiếng Việt tự nhiên, ngắn gọn. 
+                Trả lời tối đa 2-3 câu. Hiểu rõ ngữ cảnh hội thoại trước. 
+                Hôm nay là 29/6/2026."""}
             ] + history
 
             if search_context:
-                messages.append({"role": "user", "content": f"Thông tin tham khảo: {search_context}"})
+                messages.append({"role": "user", "content": f"Thông tin: {search_context}"})
 
             completion = groq_client.chat.completions.create(
                 messages=messages,
                 model="llama-3.3-70b-versatile",
-                temperature=0.8,
-                max_tokens=800
+                temperature=0.75,
+                max_tokens=650
             )
 
             response = completion.choices[0].message.content.strip()
-
             conversation_history[channel_id].append({"role": "assistant", "content": response})
+
             await thinking.edit(content=response)
 
         except Exception:
-            await thinking.edit(content="❌ Lỗi rồi bro, thử lại sau nhé! 😅")
+            await thinking.edit(content="❌ Lỗi rồi, thử lại sau! 😅")
 
 async def handle_tomtat(message):
-    await message.channel.send("📖 Đang đọc 800 tin nhắn để tóm tắt...")
+    await message.channel.send("📖 Đang đọc 800 tin nhắn gần nhất...")
+
     try:
         msgs = []
         async for m in message.channel.history(limit=800):
             if not m.author.bot and m.content.strip():
                 msgs.append(f"{m.author.display_name}: {m.content}")
         
-        history_text = "\n".join(reversed(msgs[-750:]))
+        history_text = "\n".join(reversed(msgs[-600:]))   # tóm tắt 600 tin
 
         completion = groq_client.chat.completions.create(
             messages=[
-                {"role": "system", "content": "Tóm tắt drama đang diễn ra trong group một cách vui vẻ, ngắn gọn, dùng emoji."},
+                {"role": "system", "content": "Tóm tắt drama đang diễn ra ngắn gọn, vui vẻ, dùng emoji phù hợp."},
                 {"role": "user", "content": f"Tóm tắt:\n{history_text}"}
             ],
             model="llama-3.3-70b-versatile",
             temperature=0.7,
-            max_tokens=1000
+            max_tokens=950
         )
         await message.reply(f"**Tóm tắt drama:**\n\n{completion.choices[0].message.content.strip()}")
     except Exception:
