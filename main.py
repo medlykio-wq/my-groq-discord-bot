@@ -41,7 +41,7 @@ async def on_message(message):
             return
 
         channel_id = str(message.channel.id)
-        thinking = await message.reply("🤔 Đang nghĩ...")
+        thinking = await message.reply("🤔 Đang tìm thông tin...")
 
         try:
             conversation_history[channel_id].append({"role": "user", "content": query})
@@ -56,8 +56,9 @@ async def on_message(message):
                 search_context = "\n".join([f"- {r['content'][:200]}" for r in search.get('results', [])])
 
             messages = [
-                {"role": "system", "content": """Bạn là Grok - thằng bạn vui tính, nói tiếng Việt tự nhiên, ngắn gọn. 
-                Trả lời tối đa 2-3 câu. Hiểu rõ ngữ cảnh hội thoại trước. 
+                {"role": "system", "content": """Bạn là Grok, thằng bạn vui tính, nói tiếng Việt tự nhiên. 
+                Thêm nhiều emoji liên quan đến nội dung (⚽ 🇧🇷 🇯🇵 🌤️ 🔥 v.v...). 
+                Trả lời ngắn gọn tối đa 3 câu. Hiểu rõ hội thoại trước. 
                 Hôm nay là 29/6/2026."""}
             ] + history
 
@@ -67,8 +68,8 @@ async def on_message(message):
             completion = groq_client.chat.completions.create(
                 messages=messages,
                 model="llama-3.3-70b-versatile",
-                temperature=0.75,
-                max_tokens=650
+                temperature=0.8,
+                max_tokens=700
             )
 
             response = completion.choices[0].message.content.strip()
@@ -88,11 +89,11 @@ async def handle_tomtat(message):
             if not m.author.bot and m.content.strip():
                 msgs.append(f"{m.author.display_name}: {m.content}")
         
-        history_text = "\n".join(reversed(msgs[-600:]))   # tóm tắt 600 tin
+        history_text = "\n".join(reversed(msgs[-600:]))
 
         completion = groq_client.chat.completions.create(
             messages=[
-                {"role": "system", "content": "Tóm tắt drama đang diễn ra ngắn gọn, vui vẻ, dùng emoji phù hợp."},
+                {"role": "system", "content": "Tóm tắt drama vui vẻ, dùng emoji phù hợp."},
                 {"role": "user", "content": f"Tóm tắt:\n{history_text}"}
             ],
             model="llama-3.3-70b-versatile",
@@ -103,12 +104,10 @@ async def handle_tomtat(message):
     except Exception:
         await message.reply("❌ Không đọc được lịch sử 😔")
 
-# Web Server
 app = FastAPI()
-
 @app.get("/")
 async def root():
-    return {"status": "Bot đang chạy!"}
+    return {"status": "Bot đang chạy! ⚽"}
 
 def run_discord_bot():
     client.run(os.getenv("DISCORD_TOKEN"))
