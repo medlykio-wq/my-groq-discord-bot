@@ -1,6 +1,0 @@
-discord.py
-groq
-python-dotenv
-tavily-python
-fastapi
-uvicorn
