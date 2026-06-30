@@ -7,6 +7,7 @@ from fastapi import FastAPI
 import uvicorn
 import threading
 from collections import defaultdict
+import datetime
 
 load_dotenv()
 
@@ -31,16 +32,19 @@ async def on_message(message):
 
     content = message.content.strip().lower()
 
+    # Lệnh tóm tắt
     if content.startswith('!tomtat') or content.startswith('!tóm tắt'):
         await handle_tomtat(message)
         return
 
+    # Bot được mention trực tiếp
     if client.user.mentioned_in(message) and not message.mention_everyone:
         query = message.content.replace(f'<@{client.user.id}>', '').strip()
         if not query:
             return
 
         channel_id = str(message.channel.id)
+        today = datetime.datetime.now().strftime("%d/%m/%Y")
         thinking = await message.reply("🤔 Đang tìm thông tin...")
 
         try:
@@ -56,10 +60,10 @@ async def on_message(message):
                 search_context = "\n".join([f"- {r['content'][:200]}" for r in search.get('results', [])])
 
             messages = [
-                {"role": "system", "content": """Bạn là Grok, thằng bạn vui tính, nói tiếng Việt tự nhiên. 
+                {"role": "system", "content": f"""Bạn là Grok, thằng bạn vui tính, nói tiếng Việt tự nhiên. 
                 Thêm nhiều emoji liên quan đến nội dung (⚽ 🇧🇷 🇯🇵 🌤️ 🔥 v.v...). 
                 Trả lời ngắn gọn tối đa 3 câu. Hiểu rõ hội thoại trước. 
-                Hôm nay là 29/6/2026."""}
+                Hôm nay là ngày {today}."""}
             ] + history
 
             if search_context:
@@ -89,7 +93,6 @@ async def handle_tomtat(message):
             if not msg.author.bot and msg.content.strip():
                 messages.append(f"{msg.author.display_name}: {msg.content}")
 
-        # Dùng khoảng 450 tin gần nhất
         history_text = "\n".join(reversed(messages[-450:]))
 
         completion = groq_client.chat.completions.create(
@@ -99,7 +102,7 @@ async def handle_tomtat(message):
             ],
             model="llama-3.3-70b-versatile",
             temperature=0.7,
-            max_tokens=1200   # Cho phép tóm tắt dài hơn
+            max_tokens=1200
         )
 
         summary = completion.choices[0].message.content.strip()
@@ -108,7 +111,9 @@ async def handle_tomtat(message):
     except Exception:
         await message.reply("❌ Không đọc được lịch sử tin nhắn. Kiểm tra quyền bot nhé! 😔")
 
+# Web Server cho Render
 app = FastAPI()
+
 @app.get("/")
 async def root():
     return {"status": "Bot đang chạy! ⚽"}
