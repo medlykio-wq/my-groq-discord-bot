@@ -85,7 +85,7 @@ async def on_message(message):
             await thinking.edit(content="❌ Lỗi rồi, thử lại sau! 😅")
 
 async def handle_tomtat(message):
-    await message.channel.send("📖 Đang đọc 500 tin nhắn gần nhất để tóm tắt drama...")
+    await message.channel.send("📖 Đang đọc 500 tin nhắn và phân tích drama...")
 
     try:
         messages = []
@@ -97,19 +97,21 @@ async def handle_tomtat(message):
 
         completion = groq_client.chat.completions.create(
             messages=[
-                {"role": "system", "content": "Tóm tắt chi tiết những gì mọi người đang nói trong group. Nêu rõ drama chính, ai nói gì nổi bật, không cần ngắn gọn quá."},
-                {"role": "user", "content": f"Tóm tắt cuộc trò chuyện:\n{history_text}"}
+                {"role": "system", "content": """Bạn là người tóm tắt drama rất sắc bén và có quan điểm rõ ràng. 
+                Đừng nói kiểu cân bằng nửa nạc nửa mỡ. Hãy nêu rõ ai đang占 ưu thế, drama chính là gì, dự đoán kết quả nếu có. 
+                Viết vui vẻ, dí dóm, dùng emoji phù hợp."""},
+                {"role": "user", "content": f"Tóm tắt và đưa ra quan điểm rõ ràng về cuộc trò chuyện:\n{history_text}"}
             ],
             model="llama-3.3-70b-versatile",
-            temperature=0.7,
-            max_tokens=1200
+            temperature=0.75,
+            max_tokens=1100
         )
 
         summary = completion.choices[0].message.content.strip()
         await message.reply(f"**Tóm tắt drama:**\n\n{summary}")
 
     except Exception:
-        await message.reply("❌ Không đọc được lịch sử tin nhắn. Kiểm tra quyền bot nhé! 😔")
+        await message.reply("❌ Không đọc được lịch sử tin nhắn 😔")
 
 # Web Server cho Render
 app = FastAPI()
