@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 import uvicorn
 import threading
-from collections import defaultdict
 import datetime
 
 load_dotenv()
@@ -18,8 +17,6 @@ client = discord.Client(intents=intents)
 
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
-
-conversation_history = defaultdict(list)
 
 @client.event
 async def on_ready():
@@ -43,17 +40,10 @@ async def on_message(message):
         if not query:
             return
 
-        channel_id = str(message.channel.id)
         today = datetime.datetime.now().strftime("%d/%m/%Y")
         thinking = await message.reply("🤔 Đang tìm thông tin...")
 
         try:
-            conversation_history[channel_id].append({"role": "user", "content": query})
-            if len(conversation_history[channel_id]) > 25:
-                conversation_history[channel_id] = conversation_history[channel_id][-25:]
-
-            history = conversation_history[channel_id][-20:]
-
             search_context = ""
             if any(k in query.lower() for k in ["thời tiết", "tin", "kết quả", "trận", "kèo", "bóng"]):
                 search = tavily.search(query, max_results=3)
@@ -62,9 +52,10 @@ async def on_message(message):
             messages = [
                 {"role": "system", "content": f"""Bạn là Grok, thằng bạn vui tính, nói tiếng Việt tự nhiên. 
                 Thêm nhiều emoji liên quan đến nội dung (⚽ 🇧🇷 🇯🇵 🌤️ 🔥 v.v...). 
-                Trả lời ngắn gọn tối đa 3 câu. Hiểu rõ hội thoại trước. 
-                Hôm nay là ngày {today}."""}
-            ] + history
+                Trả lời ngắn gọn tối đa 3 câu. 
+                Hôm nay là ngày {today}."""},
+                {"role": "user", "content": query}
+            ]
 
             if search_context:
                 messages.append({"role": "user", "content": f"Thông tin: {search_context}"})
@@ -77,15 +68,13 @@ async def on_message(message):
             )
 
             response = completion.choices[0].message.content.strip()
-            conversation_history[channel_id].append({"role": "assistant", "content": response})
-
             await thinking.edit(content=response)
 
         except Exception:
             await thinking.edit(content="❌ Lỗi rồi, thử lại sau! 😅")
 
 async def handle_tomtat(message):
-    await message.channel.send("📖 Đang đọc 500 tin nhắn và phân tích drama...")
+    await message.channel.send("📖 Đang đọc 500 tin nhắn gần nhất để tóm tắt drama...")
 
     try:
         messages = []
@@ -98,7 +87,7 @@ async def handle_tomtat(message):
         completion = groq_client.chat.completions.create(
             messages=[
                 {"role": "system", "content": """Bạn là người tóm tắt drama rất sắc bén và có quan điểm rõ ràng. 
-                Đừng nói kiểu cân bằng nửa nạc nửa mỡ. Hãy nêu rõ ai đang占 ưu thế, drama chính là gì, dự đoán kết quả nếu có. 
+                Đừng nói kiểu cân bằng nửa nạc nửa mỡ. Hãy nêu rõ ai đang chiếm ưu thế, drama chính là gì, dự đoán kết quả nếu có. 
                 Viết vui vẻ, dí dóm, dùng emoji phù hợp."""},
                 {"role": "user", "content": f"Tóm tắt và đưa ra quan điểm rõ ràng về cuộc trò chuyện:\n{history_text}"}
             ],
