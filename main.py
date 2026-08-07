@@ -75,7 +75,7 @@ TRẢ LỜI:
                 messages=messages,
                 model="llama-3.3-70b-versatile",
                 temperature=0.8,
-                max_tokens=900
+                max_tokens=500
             )
 
             response = completion.choices[0].message.content.strip()
