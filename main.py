@@ -27,13 +27,6 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    content = message.content.strip().lower()
-
-    # Lệnh tóm tắt
-    if content.startswith('!tomtat') or content.startswith('!tóm tắt'):
-        await handle_tomtat(message)
-        return
-
     # Bot được mention trực tiếp
     if client.user.mentioned_in(message) and not message.mention_everyone:
         query = message.content.replace(f'<@{client.user.id}>', '').strip()
@@ -52,17 +45,17 @@ async def on_message(message):
             messages = [
                 {
                     "role": "system",
-                    "content": f"""Bạn là Grok, thằng bạn vui tính, nói tiếng Việt tự nhiên, thẳng thắn.
+                    "content": f"""Bạn là Grok, thằng bạn vui tính, nói tiếng Việt tự nhiên, thẳng thắn và dí dóm.
 
-CÁCH DÙNG EMOJI:
-- Dùng emoji ĐA DẠNG và PHÙ HỢP với nội dung
-- Mỗi chủ đề chính phải có emoji liên quan trực tiếp
-- Ví dụ: 🃏 poker, 💰 cờ bạc, 🎮 game, 🔥 tranh luận, 😂 đùa, ⚽ bóng đá, 🌤️ thời tiết...
+CÁCH DÙNG EMOJI (RẤT QUAN TRỌNG):
+- Càng nhiều emoji càng tốt, càng thích
+- Mỗi câu nên có nhiều emoji phù hợp
+- Emoji phải liên quan trực tiếp đến nội dung
+- Ví dụ: 🃏💰🎮🔥😂⚽🌤️🚀✨💫🌟❤️🎯🏆🎉🎊🌈🦄🍀🎁
 
 TRẢ LỜI:
-- Câu hỏi đơn giản: ngắn gọn (5-35 chữ)
-- Câu hỏi phức tạp: có thể dài hơn
-- Đi thẳng vào vấn đề, không vòng vo
+- Đi thẳng vào vấn đề
+- Ngắn gọn hoặc vừa phải tùy câu hỏi
 - Hôm nay là ngày {today}"""
                 },
                 {"role": "user", "content": query}
@@ -74,8 +67,8 @@ TRẢ LỜI:
             completion = groq_client.chat.completions.create(
                 messages=messages,
                 model="llama-3.3-70b-versatile",
-                temperature=0.8,
-                max_tokens=900
+                temperature=0.85,
+                max_tokens=800
             )
 
             response = completion.choices[0].message.content.strip()
@@ -84,61 +77,12 @@ TRẢ LỜI:
         except Exception:
             await thinking.edit(content="❌ Lỗi rồi, thử lại sau! 😅")
 
-async def handle_tomtat(message):
-    await message.channel.send("📊 Đang tóm tắt 500 tin nhắn gần nhất...")
-
-    try:
-        messages = []
-        async for msg in message.channel.history(limit=500):
-            if not msg.author.bot and msg.content.strip():
-                messages.append(f"{msg.author.display_name}: {msg.content}")
-
-        if len(messages) < 10:
-            await message.reply("📊 Chưa có đủ tin nhắn để tóm tắt. Mọi người chat thêm đi nhé! 💬")
-            return
-
-        history_text = "\n".join(reversed(messages[-450:]))
-
-        completion = groq_client.chat.completions.create(
-            messages=[
-                {
-                    "role": "system",
-                    "content": """Bạn là người tóm tắt drama Discord thẳng thắn, có quan điểm rõ ràng và một chiều.
-
-QUY TẮC BẮT BUỘC:
-1. Bắt đầu thẳng vào nội dung, KHÔNG viết câu mở đầu kiểu "Tóm tắt cuộc trò chuyện...", "Quan điểm của tôi là...", "Dưới đây là tóm tắt...".
-2. Tuyệt đối KHÔNG dùng từ "dường như", "có vẻ", "có lẽ". Phải nói chắc chắn, dứt khoát.
-3. Có quan điểm rõ ràng, một chiều, không nửa nạc nửa mỡ.
-4. Mỗi chủ đề / điểm nhấn chính PHẢI có emoji tương ứng và liên quan trực tiếp (ví dụ: 🃏 poker, 💰 cờ bạc, 🎮 game, 🔥 tranh luận, 😂 đùa...).
-5. Tránh lặp cấu trúc câu máy móc (không viết 3-4 dòng cùng kiểu "XXX là người...").
-6. Viết tự nhiên, có chất, dễ đọc.
-7. Nêu rõ drama chính và ai đang chiếm ưu thế.
-
-Trả lời bằng tiếng Việt."""
-                },
-                {
-                    "role": "user",
-                    "content": f"Tóm tắt cuộc trò chuyện sau:\n\n{history_text}"
-                }
-            ],
-            model="llama-3.3-70b-versatile",
-            temperature=0.75,
-            max_tokens=900
-        )
-
-        summary = completion.choices[0].message.content.strip()
-        await message.reply(f"**Tóm tắt drama:**\n\n{summary}")
-
-    except Exception as e:
-        print(f"Lỗi tóm tắt: {e}")
-        await message.reply("❌ Không đọc được lịch sử tin nhắn hoặc lỗi khi tóm tắt. Thử lại sau nhé! 😔")
-
 # Web Server cho Render
 app = FastAPI()
 
 @app.get("/")
 async def root():
-    return {"status": "Bot đang chạy! ⚽"}
+    return {"status": "Bot đang chạy! ⚽✨"}
 
 def run_discord_bot():
     client.run(os.getenv("DISCORD_TOKEN"))
