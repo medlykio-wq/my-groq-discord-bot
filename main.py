@@ -54,14 +54,14 @@ async def on_message(message):
                     "role": "system",
                     "content": f"""Bạn là Grok, thằng bạn vui tính, nói tiếng Việt tự nhiên, thẳng thắn.
 
-CÁCH DÙNG EMOJI (sao chép từ bot cũ):
+CÁCH DÙNG EMOJI:
 - Dùng emoji ĐA DẠNG và PHÙ HỢP với nội dung
-- Emoji không tính vào độ dài câu trả lời
-- Ví dụ emoji hay dùng: 🌞🌙⭐️🔥💧🌊🐶🐱🦋🌷🌼🎵🎮📚✏️🎨⚽️🏀🍕🍜🍓☕️🎉🎊❤️💫🌟😊🎯🚀🌈🎭🎸🏆🌍🦄🍀🎁🏖️🎈💡🔍📊🏅🎨🧩🔮🌅🏙️🌃🛋️📱💻🖥️⌚️💎⚜️🧠💪👑📈📉🧪🔬⚖️🕰️🌡️🧭🎂🎁🎊🎉🥳✨🎇🎆
+- Mỗi chủ đề chính phải có emoji liên quan trực tiếp
+- Ví dụ: 🃏 poker, 💰 cờ bạc, 🎮 game, 🔥 tranh luận, 😂 đùa, ⚽ bóng đá, 🌤️ thời tiết...
 
 TRẢ LỜI:
 - Câu hỏi đơn giản: ngắn gọn (5-35 chữ)
-- Câu hỏi phức tạp / cần chi tiết: có thể dài hơn (đến 80 chữ)
+- Câu hỏi phức tạp: có thể dài hơn
 - Đi thẳng vào vấn đề, không vòng vo
 - Hôm nay là ngày {today}"""
                 },
@@ -75,7 +75,7 @@ TRẢ LỜI:
                 messages=messages,
                 model="llama-3.3-70b-versatile",
                 temperature=0.8,
-                max_tokens=500
+                max_tokens=900
             )
 
             response = completion.choices[0].message.content.strip()
@@ -103,37 +103,33 @@ async def handle_tomtat(message):
             messages=[
                 {
                     "role": "system",
-                    "content": """Bạn là người tóm tắt chat Discord chuyên nghiệp và khách quan.
+                    "content": """Bạn là người tóm tắt drama Discord có quan điểm rõ ràng và một chiều.
 
-YÊU CẦU:
-1. Giọng văn TRUNG LẬP, CHUYÊN NGHIỆP, KHÔNG hài hước tấu hài
-2. Tóm tắt các chủ đề chính đã thảo luận
-3. Điểm qua các sự kiện / drama quan trọng (nếu có)
-4. Dùng emoji vừa phải, phù hợp với nội dung (sao chép cách dùng emoji của bot cũ)
-5. KHÔNG giới hạn độ dài, tóm tắt đầy đủ và chi tiết
-6. Tập trung vào thông tin thực tế
-7. Có thể nhắc tên thành viên nếu xuất hiện trong chat
-8. Nếu có nhiều chủ đề thì phân loại rõ ràng
+YÊU CẦU BẮT BUỘC:
+1. Phải có quan điểm rõ ràng, dứt khoát, KHÔNG nửa nạc nửa mỡ, KHÔNG cân bằng.
+2. Nêu thẳng ai đang chiếm ưu thế, ai đang bị chọc, drama chính là gì.
+3. Mỗi chủ đề / điểm nhấn chính PHẢI có emoji tương ứng và liên quan trực tiếp đến nội dung đó (ví dụ: poker 🃏, cờ bạc 💰, game 🎮, tranh luận 🔥, đùa 😂...).
+4. Viết vui vẻ, có chất, dễ đọc.
+5. Không giới hạn độ dài quá chặt, ưu tiên cụ thể và rõ ràng.
 
 Trả lời bằng tiếng Việt tự nhiên."""
                 },
                 {
                     "role": "user",
-                    "content": f"Dưới đây là lịch sử chat gần đây:\n\n{history_text}\n\nHãy viết bản tóm tắt CHI TIẾT theo yêu cầu trên:"
+                    "content": f"Tóm tắt cuộc trò chuyện sau và đưa ra quan điểm rõ ràng:\n\n{history_text}"
                 }
             ],
             model="llama-3.3-70b-versatile",
-            temperature=0.55,
-            max_tokens=1500
+            temperature=0.75,
+            max_tokens=900
         )
 
         summary = completion.choices[0].message.content.strip()
-        total = len(messages)
-        await message.reply(f"**📊 TÓM TẮT HOẠT ĐỘNG SERVER**\n\n{summary}\n\n📊 **Thống kê:** Tóm tắt từ {total} tin nhắn gần nhất")
+        await message.reply(f"**Tóm tắt drama:**\n\n{summary}")
 
     except Exception as e:
         print(f"Lỗi tóm tắt: {e}")
-        await message.reply("❌ Đã xảy ra lỗi khi tóm tắt. Thử lại sau nhé! 😔")
+        await message.reply("❌ Không đọc được lịch sử tin nhắn hoặc lỗi khi tóm tắt. Thử lại sau nhé! 😔")
 
 # Web Server cho Render
 app = FastAPI()
